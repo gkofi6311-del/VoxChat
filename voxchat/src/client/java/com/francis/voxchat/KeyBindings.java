@@ -7,17 +7,16 @@ import org.lwjgl.glfw.GLFW;
 
 public class KeyBindings {
 
-    public static KeyBinding VOXCHAT_PUSH_TO_TALK;
+    public static KeyBinding VOICE_KEY;
 
     public static void register() {
-
-        VOXCHAT_PUSH_TO_TALK = KeyBindingHelper.registerKeyBinding(
-                new KeyBinding(
-                        "key.voxchat.push_to_talk",
-                        InputUtil.Type.KEYSYM,
-                        GLFW.GLFW_KEY_V,
-                        "category.voxchat"
-                )
+        VOICE_KEY = KeyBindingHelper.registerKeyBinding(
+            new KeyBinding(
+                "key.voxchat.push_to_talk",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_V,
+                "category.voxchat"
+            )
         );
     }
 }
