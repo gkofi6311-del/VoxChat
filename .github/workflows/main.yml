@@ -1,4 +1,4 @@
-name: Build VoxChat (GitHub Only)
+name: Build VoxChat
 
 on:
   push:
@@ -18,14 +18,14 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Install Gradle (no wrapper needed)
-        run: sudo apt-get update && sudo apt-get install -y gradle
-
-      - name: Build mod using Gradle
+      - name: Build mod
         run: gradle build
+
+      - name: Debug output (IMPORTANT)
+        run: ls -R build || true
 
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
           name: voxchat
-          path: build/libs/*.jar
+          path: build/libs/
