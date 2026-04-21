@@ -1,20 +1,23 @@
 package com.francis.voxchat;
 
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import org.lwjgl.glfw.GLFW;
+import net.fabricmc.api.ClientModInitializer;
 
-public class KeyBindings {
+public class VoxChatClient implements ClientModInitializer {
 
-    public static KeyBinding VOICE_RECORD;
+    @Override
+    public void onInitializeClient() {
 
-    public static void register() {
-        VOICE_RECORD = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.voxchat.voice_record",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_V,
-                "category.voxchat"
-        ));
+        // register keybinds
+        KeyBindings.register();
+
+        // example tick check (safe usage pattern)
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(client -> {
+
+            if (KeyBindings.VOICE_RECORD != null && KeyBindings.VOICE_RECORD.wasPressed()) {
+                System.out.println("VOICE RECORD PRESSED");
+                // TODO: your voice logic here
+            }
+
+        });
     }
 }
