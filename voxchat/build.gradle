@@ -1,0 +1,109 @@
+plugins {
+    id 'fabric-loom' version '1.7-SNAPSHOT'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name = 'JCenter (for Vosk)'
+        url = 'https://jcenter.bintray.com'
+    }
+    maven {
+        name = 'Alpha Cephei (Vosk)'
+        url = 'https://alphacephei.com/maven/'
+    }
+}
+
+configurations {
+    // Configuration for libraries to be bundled into the jar
+    bundle
+}
+
+dependencies {
+    // Minecraft / Fabric
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Vosk speech recognition — bundled into the final jar
+    bundle('net.java.dev.jna:jna:5.13.0') { transitive = false }
+    bundle('net.java.dev.jna:jna-platform:5.13.0') { transitive = false }
+    bundle('com.alphacephei:vosk:0.3.45') { transitive = false }
+
+    // Make bundled deps available at compile & runtime inside the dev env
+    configurations.bundle.dependencies.each { dep ->
+        implementation dep
+        runtimeOnly dep
+    }
+}
+
+processResources {
+    inputs.property 'version', project.version
+
+    filteringCharset 'UTF-8'
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
+}
+
+def targetJavaVersion = 21
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release = targetJavaVersion
+}
+
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    if (JavaVersion.current() < javaVersion) {
+        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
+    }
+    withSourcesJar()
+}
+
+jar {
+    inputs.property 'archivesName', project.base.archivesName
+
+    from('LICENSE') {
+        rename { "${it}_${project.base.archivesName}" }
+    }
+
+    // Bundle all 'bundle' configuration dependencies into the fat jar
+    from {
+        configurations.bundle.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+            'Implementation-Title': 'VoxChat',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        // Define publish repositories here if needed
+    }
+}

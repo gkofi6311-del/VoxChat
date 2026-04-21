@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "voxchat",
+  "version": "${version}",
+  "name": "VoxChat",
+  "description": "Voice-to-text chat mod for Minecraft using Vosk offline speech recognition.",
+  "authors": [
+    "francis"
+  ],
+  "contact": {
+    "homepage": "https://github.com/francis/voxchat",
+    "sources": "https://github.com/francis/voxchat"
+  },
+  "license": "MIT",
+  "icon": "assets/voxchat/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.francis.voxchat.VoxChatMod"
+    ]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}

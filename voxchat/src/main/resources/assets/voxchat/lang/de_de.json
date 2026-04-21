@@ -1,0 +1,10 @@
+{
+  "key.category.voxchat": "VoxChat",
+  "key.voxchat.voice": "Spracheingabe",
+  "key.voxchat.language": "Sprache wechseln",
+
+  "voxchat.status.recording": "§a[VoxChat] 🎤 Aufnahme…",
+  "voxchat.status.processing": "§e[VoxChat] ⏳ Verarbeitung…",
+  "voxchat.status.nothing": "§c[VoxChat] Nichts erkannt.",
+  "voxchat.status.lang_switched": "§d[VoxChat] Sprache gewechselt zu: "
+}
