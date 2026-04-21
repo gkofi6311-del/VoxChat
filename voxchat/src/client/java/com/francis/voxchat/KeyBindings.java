@@ -7,12 +7,12 @@ import org.lwjgl.glfw.GLFW;
 
 public class KeybindHandler {
 
-    public static KeyBinding TOGGLE_VOICE;
+    public static KeyBinding VOICE_RECORD;
 
     public static void register() {
-        TOGGLE_VOICE = KeyBindingHelper.registerKeyBinding(
+        VOICE_RECORD = KeyBindingHelper.registerKeyBinding(
                 new KeyBinding(
-                        "key.voxchat.toggle",
+                        "key.voxchat.voice_record",
                         InputUtil.Type.KEYSYM,
                         GLFW.GLFW_KEY_V,
                         "category.voxchat"
