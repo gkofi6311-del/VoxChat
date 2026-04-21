@@ -1,31 +1,111 @@
-name: Build VoxChat
+name: Build VoxChat Mod
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repo
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 21
+      # ── 2. DEBUG: dump full tree so we can see exactly what was checked out ─
+      - name: Debug – full directory tree
+        run: |
+          echo "=== pwd ==="
+          pwd
+          echo ""
+          echo "=== full tree (depth 5) ==="
+          find . -not -path '*/.git/*' -not -path '*/build/*' | sort | head -80
+          echo ""
+          echo "=== root-level files ==="
+          ls -la
+
+      # ── 3. Setup Java 21 ───────────────────────────────────────────────────
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 21
+          java-version: '21'
+          distribution: 'temurin'
 
-      - name: Build mod
-        run: gradle build
+      # ── 4. Install Gradle 8.8 manually ─────────────────────────────────────
+      #      We bypass gradle/actions/setup-gradle entirely because it does NOT
+      #      reliably override the runner's system Gradle.  A direct install
+      #      puts gradle-8.8 first on PATH — guaranteed.
+      - name: Install Gradle 8.8
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip \
+               -O /tmp/gradle-8.8-bin.zip
+          unzip -q /tmp/gradle-8.8-bin.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.8/bin" >> $GITHUB_PATH
+          echo "Gradle installed to /opt/gradle/gradle-8.8/bin"
 
-      - name: Debug output (IMPORTANT)
-        run: ls -R build || true
+      - name: Verify Gradle version
+        run: gradle --version
 
-      - name: Upload jar
+      # ── 5. Locate the Gradle project root (handles flat OR nested repo) ────
+      - name: Find Gradle project root
+        run: |
+          if [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
+            echo "BUILD_ROOT=." >> $GITHUB_ENV
+            echo "Project root is the repo root (.)"
+          else
+            FOUND=$(find . -maxdepth 2 -name "settings.gradle" \
+                    -not -path '*/.git/*' \
+                    -not -path '*/build/*' | head -1)
+            if [ -n "$FOUND" ]; then
+              DIR=$(dirname "$FOUND")
+              echo "BUILD_ROOT=$DIR" >> $GITHUB_ENV
+              echo "Found nested project at: $DIR"
+            else
+              echo "ERROR: Cannot find settings.gradle anywhere!"
+              find . -not -path '*/.git/*' | sort
+              exit 1
+            fi
+          fi
+
+      # ── 6. Cache Gradle home ───────────────────────────────────────────────
+      - name: Cache Gradle caches
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      # ── 7. Build ───────────────────────────────────────────────────────────
+      - name: Build with Gradle
+        working-directory: ${{ env.BUILD_ROOT }}
+        run: gradle build --stacktrace
+
+      # ── 8. Debug output ────────────────────────────────────────────────────
+      - name: Debug – build/libs
+        if: always()
+        run: |
+          echo "=== build/libs/ ==="
+          ls -lh ${{ env.BUILD_ROOT }}/build/libs/ 2>/dev/null || echo "(empty or missing)"
+
+      # ── 9. Upload JAR ──────────────────────────────────────────────────────
+      - name: Upload mod JAR
         uses: actions/upload-artifact@v4
         with:
-          name: voxchat
-          path: build/libs/
+          name: voxchat-mod-jar
+          path: ${{ env.BUILD_ROOT }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
+
+      # ── 10. GitHub Release on version tags ─────────────────────────────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.BUILD_ROOT }}/build/libs/*.jar
+          generate_release_notes: true
