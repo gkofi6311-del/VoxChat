@@ -18,15 +18,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. DEBUG: dump full tree so we can see exactly what was checked out ─
+      # ── 2. DEBUG: dump full tree ───────────────────────────────────────────
       - name: Debug – full directory tree
         run: |
           echo "=== pwd ==="
           pwd
-          echo ""
-          echo "=== full tree (depth 5) ==="
+          echo "=== full tree ==="
           find . -not -path '*/.git/*' -not -path '*/build/*' | sort | head -80
-          echo ""
           echo "=== root-level files ==="
           ls -la
 
@@ -37,43 +35,40 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # ── 4. Install Gradle 8.8 manually ─────────────────────────────────────
-      #      We bypass gradle/actions/setup-gradle entirely because it does NOT
-      #      reliably override the runner's system Gradle.  A direct install
-      #      puts gradle-8.8 first on PATH — guaranteed.
-      - name: Install Gradle 8.8
+      # ── 4. Install Gradle 8.11 manually ────────────────────────────────────
+      #      fabric-loom 1.8-SNAPSHOT requires Gradle >= 8.10.
+      #      We install 8.11 manually so it's first on PATH — no surprises.
+      - name: Install Gradle 8.11
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.8-bin.zip \
-               -O /tmp/gradle-8.8-bin.zip
-          unzip -q /tmp/gradle-8.8-bin.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-8.8/bin" >> $GITHUB_PATH
-          echo "Gradle installed to /opt/gradle/gradle-8.8/bin"
+          wget -q https://services.gradle.org/distributions/gradle-8.11-bin.zip \
+               -O /tmp/gradle-8.11-bin.zip
+          unzip -q /tmp/gradle-8.11-bin.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.11/bin" >> $GITHUB_PATH
 
       - name: Verify Gradle version
         run: gradle --version
 
-      # ── 5. Locate the Gradle project root (handles flat OR nested repo) ────
+      # ── 5. Locate Gradle project root (handles flat OR nested repo) ────────
       - name: Find Gradle project root
         run: |
           if [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
             echo "BUILD_ROOT=." >> $GITHUB_ENV
-            echo "Project root is the repo root (.)"
+            echo "Project root is repo root (.)"
           else
             FOUND=$(find . -maxdepth 2 -name "settings.gradle" \
-                    -not -path '*/.git/*' \
-                    -not -path '*/build/*' | head -1)
+                    -not -path '*/.git/*' -not -path '*/build/*' | head -1)
             if [ -n "$FOUND" ]; then
               DIR=$(dirname "$FOUND")
               echo "BUILD_ROOT=$DIR" >> $GITHUB_ENV
-              echo "Found nested project at: $DIR"
+              echo "Found project at: $DIR"
             else
-              echo "ERROR: Cannot find settings.gradle anywhere!"
+              echo "ERROR: Cannot find settings.gradle!"
               find . -not -path '*/.git/*' | sort
               exit 1
             fi
           fi
 
-      # ── 6. Cache Gradle home ───────────────────────────────────────────────
+      # ── 6. Cache ───────────────────────────────────────────────────────────
       - name: Cache Gradle caches
         uses: actions/cache@v4
         with:
@@ -89,9 +84,7 @@ jobs:
       # ── 8. Debug output ────────────────────────────────────────────────────
       - name: Debug – build/libs
         if: always()
-        run: |
-          echo "=== build/libs/ ==="
-          ls -lh ${{ env.BUILD_ROOT }}/build/libs/ 2>/dev/null || echo "(empty or missing)"
+        run: ls -lh ${{ env.BUILD_ROOT }}/build/libs/ 2>/dev/null || echo "(empty)"
 
       # ── 9. Upload JAR ──────────────────────────────────────────────────────
       - name: Upload mod JAR
